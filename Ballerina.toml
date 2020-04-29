@@ -1,0 +1,9 @@
+[project]
+org-name = "whizsid"
+version = "0.1.0"
+license = ["MIT"]
+authors = ["WhizSid"]
+repository = "https://github.com/whizsid/angelina"
+keywords = ["ballerina", "ORM", "database", "hibernate","eloquent"]
+
+[dependencies]
