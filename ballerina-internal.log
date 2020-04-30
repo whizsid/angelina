@@ -1,0 +1,27 @@
+[2020-04-30 16:27:44,995] SEVERE {b7a.log.crash} - null 
+java.lang.NullPointerException
+	at org.ballerinalang.packerina.task.RunTestsTask.createTestJson(RunTestsTask.java:203)
+	at org.ballerinalang.packerina.task.RunTestsTask.execute(RunTestsTask.java:135)
+	at org.ballerinalang.packerina.TaskExecutor.executeTasks(TaskExecutor.java:38)
+	at org.ballerinalang.packerina.cmd.TestCommand.execute(TestCommand.java:373)
+	at java.util.Optional.ifPresent(Optional.java:159)
+	at org.ballerinalang.tool.Main.main(Main.java:57)
+ 
+[2020-04-30 16:28:20,287] SEVERE {b7a.log.crash} - null 
+java.lang.NullPointerException
+	at org.ballerinalang.packerina.task.RunTestsTask.createTestJson(RunTestsTask.java:203)
+	at org.ballerinalang.packerina.task.RunTestsTask.execute(RunTestsTask.java:135)
+	at org.ballerinalang.packerina.TaskExecutor.executeTasks(TaskExecutor.java:38)
+	at org.ballerinalang.packerina.cmd.TestCommand.execute(TestCommand.java:373)
+	at java.util.Optional.ifPresent(Optional.java:159)
+	at org.ballerinalang.tool.Main.main(Main.java:57)
+ 
+[2020-04-30 16:29:13,076] SEVERE {b7a.log.crash} - null 
+java.lang.NullPointerException
+	at org.ballerinalang.packerina.task.RunTestsTask.createTestJson(RunTestsTask.java:203)
+	at org.ballerinalang.packerina.task.RunTestsTask.execute(RunTestsTask.java:135)
+	at org.ballerinalang.packerina.TaskExecutor.executeTasks(TaskExecutor.java:38)
+	at org.ballerinalang.packerina.cmd.TestCommand.execute(TestCommand.java:373)
+	at java.util.Optional.ifPresent(Optional.java:159)
+	at org.ballerinalang.tool.Main.main(Main.java:57)
+ 
