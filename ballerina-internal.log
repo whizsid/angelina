@@ -25,3 +25,100 @@ java.lang.NullPointerException
 	at java.util.Optional.ifPresent(Optional.java:159)
 	at org.ballerinalang.tool.Main.main(Main.java:57)
  
+[2020-05-01 12:41:14,830] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-01 12:43:25,152] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-01 12:44:29,696] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-01 12:48:41,814] SEVERE {b7a.log.crash} - null 
+java.lang.NullPointerException
+	at org.wso2.ballerinalang.compiler.semantics.analyzer.SemanticAnalyzer.validateBuiltinTypeAnnotationAttachment(SemanticAnalyzer.java:2852)
+	at org.wso2.ballerinalang.compiler.semantics.analyzer.SemanticAnalyzer.visit(SemanticAnalyzer.java:384)
+	at org.wso2.ballerinalang.compiler.tree.BLangTypeDefinition.accept(BLangTypeDefinition.java:110)
+	at org.wso2.ballerinalang.compiler.semantics.analyzer.SemanticAnalyzer.analyzeNode(SemanticAnalyzer.java:2536)
+	at org.wso2.ballerinalang.compiler.semantics.analyzer.SemanticAnalyzer.analyzeNode(SemanticAnalyzer.java:2504)
+	at org.wso2.ballerinalang.compiler.semantics.analyzer.SemanticAnalyzer.analyzeDef(SemanticAnalyzer.java:2496)
+	at org.wso2.ballerinalang.compiler.semantics.analyzer.SemanticAnalyzer.visit(SemanticAnalyzer.java:251)
+	at org.wso2.ballerinalang.compiler.tree.BLangPackage.accept(BLangPackage.java:161)
+	at org.wso2.ballerinalang.compiler.semantics.analyzer.SemanticAnalyzer.analyze(SemanticAnalyzer.java:225)
+	at org.wso2.ballerinalang.compiler.CompilerDriver.typeCheck(CompilerDriver.java:270)
+	at org.wso2.ballerinalang.compiler.CompilerDriver.compile(CompilerDriver.java:222)
+	at org.wso2.ballerinalang.compiler.CompilerDriver.compilePackageSymbol(CompilerDriver.java:214)
+	at org.wso2.ballerinalang.compiler.CompilerDriver.compilePackage(CompilerDriver.java:131)
+	at org.wso2.ballerinalang.compiler.Compiler.compilePackages(Compiler.java:166)
+	at org.wso2.ballerinalang.compiler.Compiler.compilePackage(Compiler.java:173)
+	at org.wso2.ballerinalang.compiler.Compiler.compile(Compiler.java:91)
+	at org.wso2.ballerinalang.compiler.Compiler.build(Compiler.java:99)
+	at org.ballerinalang.packerina.task.CompileTask.execute(CompileTask.java:52)
+	at org.ballerinalang.packerina.TaskExecutor.executeTasks(TaskExecutor.java:38)
+	at org.ballerinalang.packerina.cmd.RunCommand.execute(RunCommand.java:284)
+	at java.util.Optional.ifPresent(Optional.java:159)
+	at org.ballerinalang.tool.Main.main(Main.java:57)
+ 
+[2020-05-01 12:50:18,482] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-01 13:03:00,301] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-01 13:04:07,958] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-01 13:05:29,486] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-01 13:06:09,818] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-01 13:08:22,117] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-01 13:16:19,529] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-01 14:01:52,044] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-01 17:33:55,155] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
