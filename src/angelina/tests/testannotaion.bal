@@ -67,15 +67,6 @@ function testFunction1() {
     typedesc<Actor> td = typeof a1;
     io:println(Actor);
 
-    Angelina ang = new(new({
-        url: "jdbc:mysql://localhost:3306/angelina",
-        username: "ramesh",
-        password: "warurami",
-        dbOptions: {useSSL: false}
-    }));
-
-    Actor|error a2 = <Actor|error>ang.findOne(Actor,1);
-
     string? tableName = td.@Entity?.tableName;
 
     test:assertEquals(tableName, "Actor");

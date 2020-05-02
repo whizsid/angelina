@@ -8,38 +8,113 @@ public type Parameter record {
     anydata value;
 };
 
-type Condition record {
-    string operator;
-    Parameter right;
-    Parameter left;
-};
+public type LogicalOperator AND|OR;
 
 public const AND = "AND";
 public const OR = "OR";
 
-public type LogicalOperator AND|OR;
-
+type Condition record {
+    string operator;
+    Parameter right;
+    Parameter left;
+    LogicalOperator prefixedLogicalOperator?;
+};
 
 public type ConditionSet object {
-    private LogicalOperator LogicalOperator;
     (Condition|ConditionSet)[] childs = [];
+    LogicalOperator prefixedLogicalOperator = AND;
 
-    public function _init(Parameter left, string operator, Parameter right){
+    public function _init(Parameter left, string operator, Parameter right, LogicalOperator lo = AND){
         self.childs.push(<Condition> {
             left,
             right,
             operator
         });
+        self.prefixedLogicalOperator = lo;
     }
 
-    public function and(){
-        
+
+    # Create a condition and combine it with AND operator
+    # 
+    # <code>
+    # WHERE foo!=1 AND bar = 2
+    # </code>
+    # 
+    # + left - Left side of the condition
+    # + operator - Operator that using to compare left side and right side
+    # + right - Right side of the condition
+    # + return - The condition set
+    public function and(Parameter left, string operator, Parameter right) returns ConditionSet{
+
+        self.childs.push(<Condition> {
+            left,
+            right,
+            operator,
+            prefixedLogicalOperator: AND
+        });
+
+        return self;
     }
 
-    public function sub(Parameter left, string operator, Parameter right) returns ConditionSet{
+    # Create a condition and combine it with OR operator
+    # 
+    # <code>
+    # WHERE foo!=1 OR bar = 2
+    # </code>
+    # 
+    # + left - Left side of the condition
+    # + operator - Operator that using to compare left side and right side
+    # + right - Right side of the condition
+    # + return - The condition set
+    public function or(Parameter left, string operator, Parameter right) returns ConditionSet{
+        self.childs.push(<Condition> {
+            left,
+            right,
+            operator,
+            prefixedLogicalOperator: OR
+        });
+
+        return self;
+    }
+
+    # Create a sub condition set and combine it with AND operator
+    # 
+    # These conditions are rendering inside parentheses.
+    # 
+    # <code>
+    # WHERE foo!=1 OR (bar =2 AND foo = 1)
+    # </code>
+    # 
+    # + left - Left side of the condition
+    # + operator - Operator that using to compare left side and right side
+    # + right - Right side of the condition
+    # + return - Child condition set
+    public function andSub(Parameter left, string operator, Parameter right) returns ConditionSet{
         ConditionSet child = new();
 
-        child._init(left, operator, right);
+        child._init(left, operator, right, AND);
+
+        self.childs.push(child);
+
+        return child;
+    }
+
+    # Create a sub condition set and combine it with OR operator
+    # 
+    # These conditions are rendering inside parentheses.
+    # 
+    # <code>
+    # WHERE foo!=1 OR (bar =2 AND foo = 1)
+    # </code>
+    # 
+    # + left - Left side of the condition
+    # + operator - Operator that using to compare left side and right side
+    # + right - Right side of the condition
+    # + return - Child condition set
+    public function orSub(Parameter left, string operator, Parameter right) returns ConditionSet{
+        ConditionSet child = new();
+
+        child._init(left, operator, right, OR);
 
         self.childs.push(child);
 
@@ -48,15 +123,21 @@ public type ConditionSet object {
 };
 
 public const LEFT_OUTER = "LEFT_OUTER";
+public const RIGHT_OUTER = "RIGHT_OUTER";
+public const CROSS = "CROSS";
+public const INNER = "INNER";
+public type JoinMode LEFT_OUTER | RIGHT_OUTER | CROSS | INNER;
+
 type TableJoin record {
     string tableName;
     string alias;
-    ConditionSet conditions;
+    ConditionSet conditions?;
 };
 
 
 public type Builder client object  {
     private string tableName;
+    private ConditionSet where;
 
     public function _init(string tableName){
         self.tableName = tableName;
@@ -78,7 +159,15 @@ public type Builder client object  {
 
     }
 
-    public function joinTable(){
+    public function leftJoin(){
+        
+    }
+
+    public function crossJoin(){
+        
+    }
+
+    public function innerJoin(){
         
     }
 
@@ -110,7 +199,8 @@ function serializeParameter(string| Parameter param) returns Parameter {
     if param is Parameter {
         return param;
     } else {
-        if( param.indexOf(".") !=() && param.indexOf(".")== param.lastIndexOf(".")){
+        
+        if( param.indexOf(".") != () && param.indexOf(".")== param.lastIndexOf(".")){
             return {
                 parameterType: COLUMN,
                 value: param
