@@ -1,3 +1,5 @@
+// Annotations and related types
+
 import ballerinax/java.jdbc;
 
 # Use it for define one to many relationships

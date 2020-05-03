@@ -1,18 +1,26 @@
-
+// Query builder and related types.
+import ballerinax/java.jdbc;
 
 public const COLUMN = "COLUMN";
 public const VALUE = "VALUE";
 
 public type Parameter record {
     COLUMN|VALUE parameterType;
-    anydata value;
+    jdbc:Param value;
 };
 
+# Logical Operators
 public type LogicalOperator AND|OR;
 
 public const AND = "AND";
 public const OR = "OR";
 
+# Angelina condition
+# 
+# + operator - The operator that you comparing right side and left side
+# + right - Right side
+# + left - Left side
+# + prefixedLogicalOperator - The logical operator that combine with previous condition
 type Condition record {
     string operator;
     Parameter right;
@@ -20,6 +28,7 @@ type Condition record {
     LogicalOperator prefixedLogicalOperator?;
 };
 
+# Angelina condition set using for WHERE clause and ON clause
 public type ConditionSet object {
     (Condition|ConditionSet)[] childs = [];
     LogicalOperator prefixedLogicalOperator = AND;
@@ -123,53 +132,185 @@ public type ConditionSet object {
 };
 
 public const LEFT_OUTER = "LEFT_OUTER";
-public const RIGHT_OUTER = "RIGHT_OUTER";
 public const CROSS = "CROSS";
 public const INNER = "INNER";
-public type JoinMode LEFT_OUTER | RIGHT_OUTER | CROSS | INNER;
+# Join Modes
+public type JoinMode LEFT_OUTER | CROSS | INNER;
 
 type TableJoin record {
-    string tableName;
-    string alias;
+    JoinMode mode;
+    string | Alias tableOrSubQuery;
     ConditionSet conditions?;
 };
 
+# Update query new values
+# 
+# + column - Column name
+# + param - Value
+type NewValue record {
+    string column;
+    jdbc:Param param;
+};
 
+public const SELECT_QUERY = "SELECT_QUERY";
+public const UPDATE_QUERY = "UPDATE_QUERY";
+public const DELETE_QUERY = "DELETE_QUERY";
+public const INSERT_QUERY = "INSERT_QUERY";
+public type QueryMode SELECT_QUERY | UPDATE_QUERY | DELETE_QUERY | INSERT_QUERY;
+
+public const ASC = "ASC";
+public const DESC = "DESC";
+public type OrderByMode ASC|DESC;
+
+public type OrderBy record {
+    string column;
+    OrderByMode mode;
+};
+
+# Angelina Query Builder
 public type Builder client object  {
-    private string tableName;
-    private ConditionSet where;
+    private jdbc:Client jdbcClient;
+    private QueryMode mode = SELECT_QUERY;
+    # Main table name
+    private string| Alias tableName;
+    # Where cluase for Update\ Select\ Delete queries
+    private ConditionSet? where;
+    private TableJoin[] joins = [];
+    # Update query new values
+    private NewValue[] newValues = [];
+    # Insert query columns
+    private string[] insertColumns = [];
+    # Insert query values sets
+    private jdbc:Param[][] values = [];
+    # Select query columns or aliases
+    private (string| Alias)[] selectColumns = [];
+    # Order by clause
+    private OrderBy[] orderByColumns = [];
+    # Having clause
+    private ConditionSet? havingClause;
 
-    public function _init(string tableName){
+    public function _init(jdbc:Client c, string| Alias tableName){
         self.tableName = tableName;
+        self.jdbcClient = c;
     }
 
-    public function set(){
-        
+    # Set clause in update query
+    # 
+    # + column - Column name
+    # + value - New value
+    public function set(string column, jdbc:Param value){
+        self.newValues.push(<NewValue>{
+            column: column,
+            param: value
+        });
     }
 
-    public function select(){
-
+    # Executing a select query
+    # 
+    # + columns - Column names or aliases for select clause
+    public function select((Alias| string)[] columns){
+        self.mode = SELECT_QUERY;
+        self.selectColumns = columns;
     }
 
+    # Execute the update query
     public function update(){
+        self.mode = UPDATE_QUERY;
+    }
+
+    # Execute the insert query
+    # 
+    # + columns - Column list for insert query
+    # + values - Value sets
+    public function insert(string[] columns, jdbc:Param[][] values){
+        self.insertColumns = columns;
+        self.values =values;
+        self.mode = INSERT_QUERY;
+    }
+
+    # Perform a left join
+    # 
+    # + tableOrSubQuery - The table name/ aliased table name / aliased sub query
+    # + left - Condition left side
+    # + right - Condition right side
+    # + operator - Operator that should use on condition
+    # + return - Condition set. You can use more than one conditions in on clause.
+    public function leftJoin(string | Alias  tableOrSubQuery,Parameter left, string operator, Parameter right )
+        returns ConditionSet {
+        ConditionSet condition = new();
+        condition._init(left, operator, right);
+
+        self.joins.push(<TableJoin>{
+            mode: LEFT_OUTER,
+            tableOrSubQuery: tableOrSubQuery,
+            conditions: condition
+        });
+
+        return condition;
+    }
+
+    # Perform a cross join
+    # 
+    # + tableOrSubQuery - The table name/ aliased table name / aliased sub query
+    public function crossJoin(string | Alias  tableOrSubQuery){
+        self.joins.push(<TableJoin>{
+            mode: LEFT_OUTER,
+            tableOrSubQuery: tableOrSubQuery
+        });
+    }
+
+    # Perform a inner join
+    # 
+    # + tableOrSubQuery - The table name/ aliased table name / aliased sub query
+    # + left - Condition left side
+    # + right - Condition right side
+    # + operator - Operator that should use on condition
+    # + return - Condition set. You can use more than one conditions in on clause.
+    public function innerJoin(string | Alias  tableOrSubQuery,Parameter left, string operator, Parameter right )
+        returns ConditionSet {
+        ConditionSet condition = new();
+        condition._init(left, operator, right);
+
+        self.joins.push(<TableJoin>{
+            mode: INNER,
+            tableOrSubQuery: tableOrSubQuery,
+            conditions: condition
+        });
+
+        return condition;
+    }
+
+    # Adding a column to the order by clause
+    # 
+    # You can call it multiple times to add multiple columns
+    # 
+    # + column - Column name or function
+    # + mode - Order mode
+    public function orderBy(string column, OrderByMode mode){
+        self.orderByColumns.push(<OrderBy>{
+            column,
+            mode
+        });
+    }
+
+    # Adding a having clause
+    # 
+    # + left - Left side of the first condition
+    # + operator - Operator using for the condition
+    # + right - Right side of the condition
+    # + return - Angelina Condition Set
+    public function having(Parameter left, string operator, Parameter right) returns ConditionSet{
+        ConditionSet having = new();
+        having._init(left, operator, right);
+        self.havingClause = having;
+        return having;
+    }
+
+
+    private function build(){
 
     }
 
-    public function insert(){
-
-    }
-
-    public function leftJoin(){
-        
-    }
-
-    public function crossJoin(){
-        
-    }
-
-    public function innerJoin(){
-        
-    }
 
 };
 
@@ -192,6 +333,27 @@ public function value(string val) returns Parameter {
     return {
         parameterType: VALUE,
         value: val
+    };
+}
+
+# Angelina alias
+# 
+# + ref - The reference that you aliasing
+# + alias - Alias
+public type Alias record {
+    string| Builder ref;
+    string alias;
+};
+
+# Aliasing a column name/ table name or sub query
+# 
+# + ref - Column name/ table name or sub query
+# + alias - New alias
+# + return - Angelina alias
+public function alias(string|Builder ref, string alias) returns Alias{
+    return {
+        ref,
+        alias
     };
 }
 

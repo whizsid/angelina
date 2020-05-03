@@ -1,3 +1,5 @@
+// Main angelina wrapper
+
 import ballerinax/java.jdbc;
 
 public type FindOptions record {
@@ -35,6 +37,14 @@ public type Angelina object {
         }
     }
 
-
+    # Create a angelina query
+    # 
+    # + tableName - Main table name or alias
+    # + return - Angelina query Builder
+    public function createQuery(string| Alias tableName) returns Builder{
+        Builder builder =  new();
+        builder._init(self.jdbcClient, tableName);
+        return builder;
+    }
 
 };
