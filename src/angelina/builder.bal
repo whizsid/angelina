@@ -11,7 +11,6 @@ public type Parameter record {
 
 # Logical Operators
 public type LogicalOperator AND|OR;
-
 public const AND = "AND";
 public const OR = "OR";
 
@@ -21,7 +20,7 @@ public const OR = "OR";
 # + right - Right side
 # + left - Left side
 # + prefixedLogicalOperator - The logical operator that combine with previous condition
-type Condition record {
+public type Condition record {
     string operator;
     Parameter right;
     Parameter left;
@@ -33,8 +32,8 @@ public type ConditionSet object {
     (Condition|ConditionSet)[] childs = [];
     LogicalOperator prefixedLogicalOperator = AND;
 
-    public function _init(Parameter left, string operator, Parameter right, LogicalOperator lo = AND){
-        self.childs.push(<Condition> {
+    public function _init(Parameter left, string operator, Parameter right, LogicalOperator lo = AND) {
+        self.childs.push(<Condition>{
             left,
             right,
             operator
@@ -53,9 +52,9 @@ public type ConditionSet object {
     # + operator - Operator that using to compare left side and right side
     # + right - Right side of the condition
     # + return - The condition set
-    public function and(Parameter left, string operator, Parameter right) returns ConditionSet{
+    public function and(Parameter left, string operator, Parameter right) returns ConditionSet {
 
-        self.childs.push(<Condition> {
+        self.childs.push(<Condition>{
             left,
             right,
             operator,
@@ -75,8 +74,8 @@ public type ConditionSet object {
     # + operator - Operator that using to compare left side and right side
     # + right - Right side of the condition
     # + return - The condition set
-    public function or(Parameter left, string operator, Parameter right) returns ConditionSet{
-        self.childs.push(<Condition> {
+    public function or(Parameter left, string operator, Parameter right) returns ConditionSet {
+        self.childs.push(<Condition>{
             left,
             right,
             operator,
@@ -98,8 +97,8 @@ public type ConditionSet object {
     # + operator - Operator that using to compare left side and right side
     # + right - Right side of the condition
     # + return - Child condition set
-    public function andSub(Parameter left, string operator, Parameter right) returns ConditionSet{
-        ConditionSet child = new();
+    public function andSub(Parameter left, string operator, Parameter right) returns ConditionSet {
+        ConditionSet child = new ();
 
         child._init(left, operator, right, AND);
 
@@ -120,8 +119,8 @@ public type ConditionSet object {
     # + operator - Operator that using to compare left side and right side
     # + right - Right side of the condition
     # + return - Child condition set
-    public function orSub(Parameter left, string operator, Parameter right) returns ConditionSet{
-        ConditionSet child = new();
+    public function orSub(Parameter left, string operator, Parameter right) returns ConditionSet {
+        ConditionSet child = new ();
 
         child._init(left, operator, right, OR);
 
@@ -129,17 +128,43 @@ public type ConditionSet object {
 
         return child;
     }
+
+    public function getQuery() returns AngelinaQuery {
+        jdbc:Parameter[] parameters = [];
+
+        string query = "";
+
+        int i=0;
+        foreach var child in self.childs {
+            if child is Condition {
+                if(i!=0){
+                        query = query.concat(child.prefixedLogicalOperator).concat(" ");
+                }
+
+            } else {
+                AngelinaQuery subQuery = child.getQuery();
+                query = query.concat("( "+ subQuery.query+" )");
+            }
+
+            i = i+1;
+        }
+
+        return {
+            query:"",
+            parameters
+        };
+    }
 };
 
+# Join Modes
+public type JoinMode LEFT_OUTER|CROSS|INNER;
 public const LEFT_OUTER = "LEFT_OUTER";
 public const CROSS = "CROSS";
 public const INNER = "INNER";
-# Join Modes
-public type JoinMode LEFT_OUTER | CROSS | INNER;
 
 type TableJoin record {
     JoinMode mode;
-    string | Alias tableOrSubQuery;
+    string|Alias tableOrSubQuery;
     ConditionSet conditions?;
 };
 
@@ -152,27 +177,32 @@ type NewValue record {
     jdbc:Param param;
 };
 
+public type QueryMode SELECT_QUERY|UPDATE_QUERY|DELETE_QUERY|INSERT_QUERY;
 public const SELECT_QUERY = "SELECT_QUERY";
 public const UPDATE_QUERY = "UPDATE_QUERY";
 public const DELETE_QUERY = "DELETE_QUERY";
 public const INSERT_QUERY = "INSERT_QUERY";
-public type QueryMode SELECT_QUERY | UPDATE_QUERY | DELETE_QUERY | INSERT_QUERY;
 
+public type OrderByMode ASC|DESC;
 public const ASC = "ASC";
 public const DESC = "DESC";
-public type OrderByMode ASC|DESC;
 
 public type OrderBy record {
     string column;
     OrderByMode mode;
 };
 
+public type AngelinaQuery record {
+    string query;
+    jdbc:Parameter[] parameters = [];
+};
+
 # Angelina Query Builder
-public type Builder client object  {
+public type Builder client object {
     private jdbc:Client jdbcClient;
     private QueryMode mode = SELECT_QUERY;
     # Main table name
-    private string| Alias tableName;
+    private string|Alias tableName = "";
     # Where cluase for Update\ Select\ Delete queries
     private ConditionSet? where;
     private TableJoin[] joins = [];
@@ -183,13 +213,13 @@ public type Builder client object  {
     # Insert query values sets
     private jdbc:Param[][] values = [];
     # Select query columns or aliases
-    private (string| Alias)[] selectColumns = [];
+    private (string|Alias)[] selectColumns = [];
     # Order by clause
     private OrderBy[] orderByColumns = [];
     # Having clause
     private ConditionSet? havingClause;
 
-    public function _init(jdbc:Client c, string| Alias tableName){
+    public function _init(jdbc:Client c, string|Alias tableName) {
         self.tableName = tableName;
         self.jdbcClient = c;
     }
@@ -198,7 +228,7 @@ public type Builder client object  {
     # 
     # + column - Column name
     # + value - New value
-    public function set(string column, jdbc:Param value){
+    public function set(string column, jdbc:Param value) {
         self.newValues.push(<NewValue>{
             column: column,
             param: value
@@ -208,13 +238,13 @@ public type Builder client object  {
     # Executing a select query
     # 
     # + columns - Column names or aliases for select clause
-    public function select((Alias| string)[] columns){
+    public function select((Alias|string)[] columns) {
         self.mode = SELECT_QUERY;
         self.selectColumns = columns;
     }
 
     # Execute the update query
-    public function update(){
+    public function update() {
         self.mode = UPDATE_QUERY;
     }
 
@@ -222,9 +252,9 @@ public type Builder client object  {
     # 
     # + columns - Column list for insert query
     # + values - Value sets
-    public function insert(string[] columns, jdbc:Param[][] values){
+    public function insert(string[] columns, jdbc:Param[][] values) {
         self.insertColumns = columns;
-        self.values =values;
+        self.values = values;
         self.mode = INSERT_QUERY;
     }
 
@@ -235,9 +265,9 @@ public type Builder client object  {
     # + right - Condition right side
     # + operator - Operator that should use on condition
     # + return - Condition set. You can use more than one conditions in on clause.
-    public function leftJoin(string | Alias  tableOrSubQuery,Parameter left, string operator, Parameter right )
-        returns ConditionSet {
-        ConditionSet condition = new();
+    public function leftJoin(string|Alias tableOrSubQuery, Parameter left, string operator, Parameter right)
+    returns ConditionSet {
+        ConditionSet condition = new ();
         condition._init(left, operator, right);
 
         self.joins.push(<TableJoin>{
@@ -252,7 +282,7 @@ public type Builder client object  {
     # Perform a cross join
     # 
     # + tableOrSubQuery - The table name/ aliased table name / aliased sub query
-    public function crossJoin(string | Alias  tableOrSubQuery){
+    public function crossJoin(string|Alias tableOrSubQuery) {
         self.joins.push(<TableJoin>{
             mode: LEFT_OUTER,
             tableOrSubQuery: tableOrSubQuery
@@ -266,9 +296,9 @@ public type Builder client object  {
     # + right - Condition right side
     # + operator - Operator that should use on condition
     # + return - Condition set. You can use more than one conditions in on clause.
-    public function innerJoin(string | Alias  tableOrSubQuery,Parameter left, string operator, Parameter right )
-        returns ConditionSet {
-        ConditionSet condition = new();
+    public function innerJoin(string|Alias tableOrSubQuery, Parameter left, string operator, Parameter right)
+    returns ConditionSet {
+        ConditionSet condition = new ();
         condition._init(left, operator, right);
 
         self.joins.push(<TableJoin>{
@@ -286,7 +316,7 @@ public type Builder client object  {
     # 
     # + column - Column name or function
     # + mode - Order mode
-    public function orderBy(string column, OrderByMode mode){
+    public function orderBy(string column, OrderByMode mode) {
         self.orderByColumns.push(<OrderBy>{
             column,
             mode
@@ -299,18 +329,94 @@ public type Builder client object  {
     # + operator - Operator using for the condition
     # + right - Right side of the condition
     # + return - Angelina Condition Set
-    public function having(Parameter left, string operator, Parameter right) returns ConditionSet{
-        ConditionSet having = new();
+    public function having(Parameter left, string operator, Parameter right) returns ConditionSet {
+        ConditionSet having = new ();
         having._init(left, operator, right);
         self.havingClause = having;
         return having;
     }
 
 
-    private function build(){
+    public function getQuery() returns AngelinaQuery {
+        jdbc:Parameter[] parameters = [];
+        string query = "";
 
+        match self.mode {
+           INSERT_QUERY => {
+                query = query.concat("INSERT INTO ");
+            }
+           UPDATE_QUERY => {
+                query = query.concat("UPDATE ");
+            }
+           SELECT_QUERY => {
+                query = query.concat("SELECT ");
+            }
+           DELETE_QUERY => {
+                query = query.concat("DELETE FROM ");
+            }
+        }
+
+        if (self.mode != SELECT_QUERY) {
+            AngelinaQuery subQuery = renderAlias(self.tableName);
+            query = query.concat(subQuery.query).concat(" ");
+
+            foreach var param in subQuery.parameters {
+                parameters.push(param);
+            }
+        }
+
+        if (self.mode == SELECT_QUERY) {
+            // Render select column list
+            int i = 0;
+            foreach var col in self.selectColumns {
+                AngelinaQuery subQuery = renderAlias(col);
+
+                if (i != 0) {
+                    query = query.concat(", ");
+                }
+
+                query = query.concat(subQuery.query);
+
+                foreach var param in subQuery.parameters {
+                    parameters.push(param);
+                }
+                i = i + 1;
+            }
+
+            // Render table
+            query = query.concat(" FROM ");
+
+            AngelinaQuery subQuery = renderAlias(self.tableName);
+            query = query.concat(subQuery.query).concat(" ");
+
+            foreach var param in subQuery.parameters {
+                parameters.push(param);
+            }
+        }
+
+        // Render Joins
+        if (self.mode == SELECT_QUERY || self.mode == UPDATE_QUERY) {
+            foreach var tableJoin in self.joins {
+                query = query.concat(tableJoin.mode).concat(" ");
+
+                AngelinaQuery subQuery = renderAlias(tableJoin.tableOrSubQuery);
+                query = query.concat(subQuery.query).concat(" ");
+                foreach var param in subQuery.parameters {
+                    parameters.push(param);
+                }
+
+                if(tableJoin.mode!=CROSS){
+                    query = query.concat("ON ");
+
+                }
+            }
+        }
+
+        return {
+            query,
+            parameters
+        };
     }
-
 
 };
 
@@ -318,7 +424,7 @@ public type Builder client object  {
 # 
 # + col - Column name
 # + return - Angelina column
-public function column(string col) returns Parameter{
+public function column(string col) returns Parameter {
     return {
         parameterType: COLUMN,
         value: col
@@ -341,7 +447,7 @@ public function value(string val) returns Parameter {
 # + ref - The reference that you aliasing
 # + alias - Alias
 public type Alias record {
-    string| Builder ref;
+    string|Builder ref;
     string alias;
 };
 
@@ -350,19 +456,19 @@ public type Alias record {
 # + ref - Column name/ table name or sub query
 # + alias - New alias
 # + return - Angelina alias
-public function alias(string|Builder ref, string alias) returns Alias{
+public function alias(string|Builder ref, string alias) returns Alias {
     return {
         ref,
         alias
     };
 }
 
-function serializeParameter(string| Parameter param) returns Parameter {
+function serializeParameter(string|Parameter param) returns Parameter {
     if param is Parameter {
         return param;
     } else {
-        
-        if( param.indexOf(".") != () && param.indexOf(".")== param.lastIndexOf(".")){
+
+        if (param.indexOf(".") != () && param.indexOf(".") == param.lastIndexOf(".")) {
             return {
                 parameterType: COLUMN,
                 value: param
