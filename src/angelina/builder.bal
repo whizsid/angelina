@@ -10,9 +10,10 @@ public type Parameter record {
 };
 
 # Logical Operators
-public type LogicalOperator AND|OR;
+public type LogicalOperator AND|OR|EMPTY;
 public const AND = "AND";
 public const OR = "OR";
+public const EMPTY = "";
 
 # Angelina condition
 # 
@@ -24,13 +25,13 @@ public type Condition record {
     string operator;
     Parameter right;
     Parameter left;
-    LogicalOperator prefixedLogicalOperator?;
+    LogicalOperator prefixedLogicalOperator =  EMPTY;
 };
 
 # Angelina condition set using for WHERE clause and ON clause
 public type ConditionSet object {
     (Condition|ConditionSet)[] childs = [];
-    LogicalOperator prefixedLogicalOperator = AND;
+    LogicalOperator prefixedLogicalOperator = EMPTY;
 
     public function _init(Parameter left, string operator, Parameter right, LogicalOperator lo = AND) {
         self.childs.push(<Condition>{
@@ -130,7 +131,7 @@ public type ConditionSet object {
     }
 
     public function getQuery() returns AngelinaQuery {
-        jdbc:Parameter[] parameters = [];
+        jdbc:Param[] parameters = [];
 
         string query = "";
 
@@ -141,16 +142,39 @@ public type ConditionSet object {
                         query = query.concat(child.prefixedLogicalOperator).concat(" ");
                 }
 
+                if(child.left.parameterType==VALUE){
+                    query = query.concat("? ");
+                    parameters.push(child.left.value);
+                } else {
+                    query = query.concat(child.left.value.toString());
+                }
+                query = query.concat(child.operator).concat(" ");
+
+                if(child.right.parameterType==VALUE){
+                    query = query.concat("? ");
+                    parameters.push(child.right.value);
+                } else {
+                    query = query.concat(child.right.value.toString());
+                }
+
             } else {
+                if(i!=0){
+                        query = query.concat(child.prefixedLogicalOperator).concat(" ");
+                }
+
                 AngelinaQuery subQuery = child.getQuery();
                 query = query.concat("( "+ subQuery.query+" )");
+
+                foreach var param in subQuery.parameters {
+                    parameters.push(param);
+                }
             }
 
             i = i+1;
         }
 
         return {
-            query:"",
+            query,
             parameters
         };
     }
@@ -165,7 +189,7 @@ public const INNER = "INNER";
 type TableJoin record {
     JoinMode mode;
     string|Alias tableOrSubQuery;
-    ConditionSet conditions?;
+    ConditionSet|boolean conditions = false;
 };
 
 # Update query new values
@@ -194,17 +218,17 @@ public type OrderBy record {
 
 public type AngelinaQuery record {
     string query;
-    jdbc:Parameter[] parameters = [];
+    jdbc:Param[] parameters = [];
 };
 
 # Angelina Query Builder
 public type Builder client object {
-    private jdbc:Client jdbcClient;
+    private jdbc:Client | boolean jdbcClient = false;
     private QueryMode mode = SELECT_QUERY;
     # Main table name
     private string|Alias tableName = "";
     # Where cluase for Update\ Select\ Delete queries
-    private ConditionSet? where;
+    private ConditionSet | boolean where = false;
     private TableJoin[] joins = [];
     # Update query new values
     private NewValue[] newValues = [];
@@ -217,7 +241,7 @@ public type Builder client object {
     # Order by clause
     private OrderBy[] orderByColumns = [];
     # Having clause
-    private ConditionSet? havingClause;
+    private ConditionSet | boolean havingClause = false;
 
     public function _init(jdbc:Client c, string|Alias tableName) {
         self.tableName = tableName;
@@ -338,7 +362,7 @@ public type Builder client object {
 
 
     public function getQuery() returns AngelinaQuery {
-        jdbc:Parameter[] parameters = [];
+        jdbc:Param[] parameters = [];
         string query = "";
 
         match self.mode {
@@ -356,6 +380,7 @@ public type Builder client object {
             }
         }
 
+        // Table Name
         if (self.mode != SELECT_QUERY) {
             AngelinaQuery subQuery = renderAlias(self.tableName);
             query = query.concat(subQuery.query).concat(" ");
@@ -365,6 +390,7 @@ public type Builder client object {
             }
         }
 
+        // Select Clause
         if (self.mode == SELECT_QUERY) {
             // Render select column list
             int i = 0;
@@ -394,8 +420,23 @@ public type Builder client object {
             }
         }
 
-        // Render Joins
-        if (self.mode == SELECT_QUERY || self.mode == UPDATE_QUERY) {
+        // Set Clause
+        if (self.mode == UPDATE_QUERY) {
+            query = query.concat("SET ");
+            
+            int i = 0;
+            foreach var newValue in self.newValues {
+                if(i!=0){
+                    query=query.concat(", ");
+                }
+                query = query.concat(newValue.column).concat(" = ? ");
+                parameters.push(newValue.param);
+                i = i+1;
+            }
+        }
+
+        // Join Clause
+        if (self.mode != INSERT_QUERY) {
             foreach var tableJoin in self.joins {
                 query = query.concat(tableJoin.mode).concat(" ");
 
@@ -407,8 +448,69 @@ public type Builder client object {
 
                 if(tableJoin.mode!=CROSS){
                     query = query.concat("ON ");
+                    ConditionSet | boolean conditions = tableJoin.conditions;
 
+                    if(conditions is ConditionSet){
+                        AngelinaQuery onClause = conditions.getQuery();
+                        query = query.concat(onClause.query).concat(" ");
+
+                        foreach var param in onClause.parameters {
+                            parameters.push(param);
+                        }
+                    }
                 }
+            }
+        }
+
+        // Where clause
+        if (self.mode != INSERT_QUERY){
+            query = query.concat("WHERE ");
+            ConditionSet | boolean whereClause = self.where;
+            if(whereClause is ConditionSet){
+                AngelinaQuery where = whereClause.getQuery();
+                query = query.concat(where.query).concat(" ");
+
+                foreach var param in where.parameters {
+                    parameters.push(param);
+                }
+            }
+        }
+
+        // Insert query
+        if (self.mode == INSERT_QUERY){
+            query = query.concat("( ");
+
+            int i = 0;
+            foreach var insertColumn in self.insertColumns {
+                if(i!=0){
+                    query = query.concat(", ");
+                }
+                query = query.concat(insertColumn);
+                i = i+1;
+            }
+
+            query = query.concat(") VALUES ");
+
+            i = 0;
+            foreach var valueSet in self.values {
+                if(i!=0){
+                    query = query.concat(", ");
+                }
+
+                query = query.concat("( ");
+
+                int j =0;
+                foreach var value in valueSet {
+                    if(j!=0){
+                        query = query.concat(", ");
+                    }
+                    query = query.concat("?");
+                    j = j+1;
+                }
+
+                query = query.concat(" ) ");
+
+                i=i+1;
             }
         }
 
@@ -416,6 +518,19 @@ public type Builder client object {
             query,
             parameters
         };
+    }
+
+    public remote function execute() returns table<map<anydata>> | jdbc:UpdateResult | error {
+        if( self.jdbcClient is jdbc:Client){
+            AngelinaQuery query = self.getQuery();
+            if(self.mode==SELECT_QUERY){
+                return self.jdbcClient->select(query.query, typedesc<map<anydata>>, ...query.parameters);
+            } else {
+                return self.jdbcClient->update(query.query, ... query.parameters);
+            }
+        } else {
+            return error("JDBC Client Not Initialized");
+        }
     }
 
 };
@@ -461,23 +576,4 @@ public function alias(string|Builder ref, string alias) returns Alias {
         ref,
         alias
     };
-}
-
-function serializeParameter(string|Parameter param) returns Parameter {
-    if param is Parameter {
-        return param;
-    } else {
-
-        if (param.indexOf(".") != () && param.indexOf(".") == param.lastIndexOf(".")) {
-            return {
-                parameterType: COLUMN,
-                value: param
-            };
-        } else {
-            return {
-                parameterType: VALUE,
-                value: param
-            };
-        }
-    }
 }
