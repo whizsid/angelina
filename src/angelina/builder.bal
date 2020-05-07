@@ -33,7 +33,7 @@ public type ConditionSet object {
     (Condition|ConditionSet)[] childs = [];
     LogicalOperator prefixedLogicalOperator = EMPTY;
 
-    public function _init(Parameter left, string operator, Parameter right, LogicalOperator lo = AND) {
+    public function __init(Parameter left, string operator, Parameter right, LogicalOperator lo = AND) {
         self.childs.push(<Condition>{
             left,
             right,
@@ -99,9 +99,7 @@ public type ConditionSet object {
     # + right - Right side of the condition
     # + return - Child condition set
     public function andSub(Parameter left, string operator, Parameter right) returns ConditionSet {
-        ConditionSet child = new ();
-
-        child._init(left, operator, right, AND);
+        ConditionSet child = new (left, operator, right, AND);
 
         self.childs.push(child);
 
@@ -121,9 +119,7 @@ public type ConditionSet object {
     # + right - Right side of the condition
     # + return - Child condition set
     public function orSub(Parameter left, string operator, Parameter right) returns ConditionSet {
-        ConditionSet child = new ();
-
-        child._init(left, operator, right, OR);
+        ConditionSet child = new (left, operator, right, OR);
 
         self.childs.push(child);
 
@@ -223,7 +219,7 @@ public type AngelinaQuery record {
 
 # Angelina Query Builder
 public type Builder client object {
-    private jdbc:Client | boolean jdbcClient = false;
+    jdbc:Client jdbcClient;
     private QueryMode mode = SELECT_QUERY;
     # Main table name
     private string|Alias tableName = "";
@@ -243,7 +239,7 @@ public type Builder client object {
     # Having clause
     private ConditionSet | boolean havingClause = false;
 
-    public function _init(jdbc:Client c, string|Alias tableName) {
+    public function __init(jdbc:Client c, string|Alias tableName) {
         self.tableName = tableName;
         self.jdbcClient = c;
     }
@@ -291,8 +287,7 @@ public type Builder client object {
     # + return - Condition set. You can use more than one conditions in on clause.
     public function leftJoin(string|Alias tableOrSubQuery, Parameter left, string operator, Parameter right)
     returns ConditionSet {
-        ConditionSet condition = new ();
-        condition._init(left, operator, right);
+        ConditionSet condition = new (left, operator, right);
 
         self.joins.push(<TableJoin>{
             mode: LEFT_OUTER,
@@ -322,8 +317,7 @@ public type Builder client object {
     # + return - Condition set. You can use more than one conditions in on clause.
     public function innerJoin(string|Alias tableOrSubQuery, Parameter left, string operator, Parameter right)
     returns ConditionSet {
-        ConditionSet condition = new ();
-        condition._init(left, operator, right);
+        ConditionSet condition = new (left, operator, right);
 
         self.joins.push(<TableJoin>{
             mode: INNER,
@@ -354,8 +348,7 @@ public type Builder client object {
     # + right - Right side of the condition
     # + return - Angelina Condition Set
     public function having(Parameter left, string operator, Parameter right) returns ConditionSet {
-        ConditionSet having = new ();
-        having._init(left, operator, right);
+        ConditionSet having = new (left, operator, right);
         self.havingClause = having;
         return having;
     }
@@ -407,6 +400,10 @@ public type Builder client object {
                     parameters.push(param);
                 }
                 i = i + 1;
+            }
+
+            if(self.selectColumns.length()==0){
+                query = query.concat("* ");
             }
 
             // Render table
@@ -520,16 +517,21 @@ public type Builder client object {
         };
     }
 
-    public remote function execute() returns table<map<anydata>> | jdbc:UpdateResult | error {
-        if( self.jdbcClient is jdbc:Client){
-            AngelinaQuery query = self.getQuery();
-            if(self.mode==SELECT_QUERY){
-                return self.jdbcClient->select(query.query, typedesc<map<anydata>>, ...query.parameters);
-            } else {
-                return self.jdbcClient->update(query.query, ... query.parameters);
-            }
+    public remote function get() returns @tainted table<record {|anydata...;|}> | error {
+        AngelinaQuery query = self.getQuery();
+        if(self.mode==SELECT_QUERY){
+            return self.jdbcClient->select(query.query, typedesc<record {| anydata...; |}>, ...query.parameters);
         } else {
-            return error("JDBC Client Not Initialized");
+            return error("Angelina: Please use execute method to execute update/insert/delete queries.");
+        }
+    }
+
+    public remote function execute() returns @tainted jdbc:UpdateResult | error {
+        AngelinaQuery query = self.getQuery();
+        if(self.mode!=SELECT_QUERY){
+            return self.jdbcClient->update(query.query, ... query.parameters);
+        } else {
+            return error("Angelina: Please use get method to select data.");
         }
     }
 

@@ -158,3 +158,39 @@ java.lang.RuntimeException: there are test failures
 	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
 	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
  
+[2020-05-07 14:07:46,636] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-07 14:07:46,732] SEVERE {b7a.log.crash} - Illegal group reference 
+java.lang.IllegalArgumentException: Illegal group reference
+	at java.util.regex.Matcher.appendReplacement(Matcher.java:857)
+	at java.util.regex.Matcher.replaceAll(Matcher.java:955)
+	at java.lang.String.replaceAll(String.java:2223)
+	at org.ballerinalang.packerina.task.RunTestsTask.generateHtmlReport(RunTestsTask.java:262)
+	at org.ballerinalang.packerina.task.RunTestsTask.execute(RunTestsTask.java:164)
+	at org.ballerinalang.packerina.TaskExecutor.executeTasks(TaskExecutor.java:38)
+	at org.ballerinalang.packerina.cmd.TestCommand.execute(TestCommand.java:373)
+	at java.util.Optional.ifPresent(Optional.java:159)
+	at org.ballerinalang.tool.Main.main(Main.java:57)
+ 
+[2020-05-07 14:15:26,946] SEVERE {b7a.log.crash} - there are test failures 
+java.lang.RuntimeException: there are test failures
+	at org.ballerinalang.test.runtime.util.TesterinaUtils.executeTests(TesterinaUtils.java:74)
+	at org.ballerinalang.test.runtime.Main.startTestSuit(Main.java:60)
+	at org.ballerinalang.test.runtime.Main.main(Main.java:53)
+ 
+[2020-05-07 14:15:27,011] SEVERE {b7a.log.crash} - Illegal group reference 
+java.lang.IllegalArgumentException: Illegal group reference
+	at java.util.regex.Matcher.appendReplacement(Matcher.java:857)
+	at java.util.regex.Matcher.replaceAll(Matcher.java:955)
+	at java.lang.String.replaceAll(String.java:2223)
+	at org.ballerinalang.packerina.task.RunTestsTask.generateHtmlReport(RunTestsTask.java:262)
+	at org.ballerinalang.packerina.task.RunTestsTask.execute(RunTestsTask.java:164)
+	at org.ballerinalang.packerina.TaskExecutor.executeTasks(TaskExecutor.java:38)
+	at org.ballerinalang.packerina.cmd.TestCommand.execute(TestCommand.java:373)
+	at java.util.Optional.ifPresent(Optional.java:159)
+	at org.ballerinalang.tool.Main.main(Main.java:57)
+ 

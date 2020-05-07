@@ -42,8 +42,7 @@ public type Angelina object {
     # + tableName - Main table name or alias
     # + return - Angelina query Builder
     public function createQuery(string| Alias tableName) returns Builder{
-        Builder builder =  new();
-        builder._init(self.jdbcClient, tableName);
+        Builder builder =  new(self.jdbcClient, tableName);
         return builder;
     }
 
