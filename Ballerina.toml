@@ -7,3 +7,11 @@ repository = "https://github.com/whizsid/angelina"
 keywords = ["ballerina", "ORM", "database", "hibernate","eloquent"]
 
 [dependencies]
+[platform]
+target = "java8"
+
+[[platform.libraries]]
+artafactId = "mysql-connector-java"
+version = "8.0.17"
+path = "/usr/share/java/mysql-connector-java.jar"
+groupId = "mysql"

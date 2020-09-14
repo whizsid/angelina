@@ -33,7 +33,10 @@ public type ConditionSet object {
     (Condition|ConditionSet)[] childs = [];
     LogicalOperator prefixedLogicalOperator = EMPTY;
 
-    public function __init(Parameter left, string operator, Parameter right, LogicalOperator lo = AND) {
+    public function __init(){
+    }
+
+    public function start(Parameter left, string operator, Parameter right, LogicalOperator lo = AND) {
         self.childs.push(<Condition>{
             left,
             right,
@@ -41,7 +44,6 @@ public type ConditionSet object {
         });
         self.prefixedLogicalOperator = lo;
     }
-
 
     # Create a condition and combine it with AND operator
     # 
@@ -99,7 +101,8 @@ public type ConditionSet object {
     # + right - Right side of the condition
     # + return - Child condition set
     public function andSub(Parameter left, string operator, Parameter right) returns ConditionSet {
-        ConditionSet child = new (left, operator, right, AND);
+        ConditionSet child = new();
+        child.start(left, operator, right, AND);
 
         self.childs.push(child);
 
@@ -119,7 +122,9 @@ public type ConditionSet object {
     # + right - Right side of the condition
     # + return - Child condition set
     public function orSub(Parameter left, string operator, Parameter right) returns ConditionSet {
-        ConditionSet child = new (left, operator, right, OR);
+        ConditionSet child = new();
+        
+        child.start(left, operator, right, OR);
 
         self.childs.push(child);
 
@@ -137,7 +142,7 @@ public type ConditionSet object {
                 if(i!=0){
                         query = query.concat(child.prefixedLogicalOperator).concat(" ");
                 }
-
+                
                 if(child.left.parameterType==VALUE){
                     query = query.concat("? ");
                     parameters.push(child.left.value);
@@ -174,6 +179,13 @@ public type ConditionSet object {
             parameters
         };
     }
+
+    # Determining the weather that condition set is empty
+    # 
+    # + return - Empty or not
+    public function isEmpty() returns boolean {
+        return self.childs.length() == 0;
+    }
 };
 
 # Join Modes
@@ -185,7 +197,7 @@ public const INNER = "INNER";
 type TableJoin record {
     JoinMode mode;
     string|Alias tableOrSubQuery;
-    ConditionSet|boolean conditions = false;
+    ConditionSet conditions = new();
 };
 
 # Update query new values
@@ -217,6 +229,13 @@ public type AngelinaQuery record {
     jdbc:Param[] parameters = [];
 };
 
+function concat(string str, string part) returns string {
+    string new_str = str.concat(" ");
+    new_str = new_str.concat(part);
+
+    return new_str;
+}
+
 # Angelina Query Builder
 public type Builder client object {
     jdbc:Client jdbcClient;
@@ -224,7 +243,7 @@ public type Builder client object {
     # Main table name
     private string|Alias tableName = "";
     # Where cluase for Update\ Select\ Delete queries
-    private ConditionSet | boolean where = false;
+    private ConditionSet where = new();
     private TableJoin[] joins = [];
     # Update query new values
     private NewValue[] newValues = [];
@@ -237,7 +256,7 @@ public type Builder client object {
     # Order by clause
     private OrderBy[] orderByColumns = [];
     # Having clause
-    private ConditionSet | boolean havingClause = false;
+    private ConditionSet havingClause = new() ;
 
     public function __init(jdbc:Client c, string|Alias tableName) {
         self.tableName = tableName;
@@ -287,12 +306,13 @@ public type Builder client object {
     # + return - Condition set. You can use more than one conditions in on clause.
     public function leftJoin(string|Alias tableOrSubQuery, Parameter left, string operator, Parameter right)
     returns ConditionSet {
-        ConditionSet condition = new (left, operator, right);
+        ConditionSet condition = new ();
+
+        condition.start(left, operator, right);
 
         self.joins.push(<TableJoin>{
             mode: LEFT_OUTER,
-            tableOrSubQuery: tableOrSubQuery,
-            conditions: condition
+            tableOrSubQuery: tableOrSubQuery
         });
 
         return condition;
@@ -304,7 +324,8 @@ public type Builder client object {
     public function crossJoin(string|Alias tableOrSubQuery) {
         self.joins.push(<TableJoin>{
             mode: LEFT_OUTER,
-            tableOrSubQuery: tableOrSubQuery
+            tableOrSubQuery: tableOrSubQuery,
+            conditions: new()
         });
     }
 
@@ -317,7 +338,9 @@ public type Builder client object {
     # + return - Condition set. You can use more than one conditions in on clause.
     public function innerJoin(string|Alias tableOrSubQuery, Parameter left, string operator, Parameter right)
     returns ConditionSet {
-        ConditionSet condition = new (left, operator, right);
+        ConditionSet condition = new();
+
+        condition.start(left, operator, right);
 
         self.joins.push(<TableJoin>{
             mode: INNER,
@@ -348,7 +371,9 @@ public type Builder client object {
     # + right - Right side of the condition
     # + return - Angelina Condition Set
     public function having(Parameter left, string operator, Parameter right) returns ConditionSet {
-        ConditionSet having = new (left, operator, right);
+        ConditionSet having = new();
+
+        having.start(left, operator, right);
         self.havingClause = having;
         return having;
     }
@@ -360,23 +385,23 @@ public type Builder client object {
 
         match self.mode {
            INSERT_QUERY => {
-                query = query.concat("INSERT INTO ");
+                query = query.concat("INSERT INTO");
             }
            UPDATE_QUERY => {
-                query = query.concat("UPDATE ");
+                query = query.concat("UPDATE");
             }
            SELECT_QUERY => {
-                query = query.concat("SELECT ");
+                query = query.concat("SELECT");
             }
            DELETE_QUERY => {
-                query = query.concat("DELETE FROM ");
+                query = query.concat("DELETE FROM");
             }
         }
 
         // Table Name
         if (self.mode != SELECT_QUERY) {
             AngelinaQuery subQuery = renderAlias(self.tableName);
-            query = query.concat(subQuery.query).concat(" ");
+            query = concat(query,subQuery.query);
 
             foreach var param in subQuery.parameters {
                 parameters.push(param);
@@ -391,10 +416,10 @@ public type Builder client object {
                 AngelinaQuery subQuery = renderAlias(col);
 
                 if (i != 0) {
-                    query = query.concat(", ");
+                    query = concat(query,",");
                 }
 
-                query = query.concat(subQuery.query);
+                query = concat(query ,subQuery.query);
 
                 foreach var param in subQuery.parameters {
                     parameters.push(param);
@@ -403,14 +428,15 @@ public type Builder client object {
             }
 
             if(self.selectColumns.length()==0){
-                query = query.concat("* ");
+                query = concat(query, "*");
             }
 
             // Render table
-            query = query.concat(" FROM ");
+            query = concat(query, "FROM");
 
             AngelinaQuery subQuery = renderAlias(self.tableName);
-            query = query.concat(subQuery.query).concat(" ");
+            
+            query = concat(query,subQuery.query);
 
             foreach var param in subQuery.parameters {
                 parameters.push(param);
@@ -419,14 +445,15 @@ public type Builder client object {
 
         // Set Clause
         if (self.mode == UPDATE_QUERY) {
-            query = query.concat("SET ");
+            query = concat(query, "SET");
             
             int i = 0;
             foreach var newValue in self.newValues {
                 if(i!=0){
-                    query=query.concat(", ");
+                    query= concat(query, ",");
                 }
-                query = query.concat(newValue.column).concat(" = ? ");
+                query = concat(query ,newValue.column);
+                query = concat( query ," = ?" );
                 parameters.push(newValue.param);
                 i = i+1;
             }
@@ -435,21 +462,21 @@ public type Builder client object {
         // Join Clause
         if (self.mode != INSERT_QUERY) {
             foreach var tableJoin in self.joins {
-                query = query.concat(tableJoin.mode).concat(" ");
+                query = concat(query, tableJoin.mode);
 
                 AngelinaQuery subQuery = renderAlias(tableJoin.tableOrSubQuery);
-                query = query.concat(subQuery.query).concat(" ");
+                query = concat(query,subQuery.query);
                 foreach var param in subQuery.parameters {
                     parameters.push(param);
                 }
 
                 if(tableJoin.mode!=CROSS){
-                    query = query.concat("ON ");
-                    ConditionSet | boolean conditions = tableJoin.conditions;
+                    query = concat(query,"ON");
+                    ConditionSet conditions = tableJoin.conditions;
 
-                    if(conditions is ConditionSet){
+                    if(!conditions.isEmpty()){
                         AngelinaQuery onClause = conditions.getQuery();
-                        query = query.concat(onClause.query).concat(" ");
+                        query = concat(query, onClause.query);
 
                         foreach var param in onClause.parameters {
                             parameters.push(param);
@@ -460,12 +487,13 @@ public type Builder client object {
         }
 
         // Where clause
-        if (self.mode != INSERT_QUERY){
-            query = query.concat("WHERE ");
-            ConditionSet | boolean whereClause = self.where;
-            if(whereClause is ConditionSet){
+        if (self.mode != INSERT_QUERY) {
+            ConditionSet whereClause = self.where;
+            if(!whereClause.isEmpty()){
+                query = concat(query ,"WHERE");
+
                 AngelinaQuery where = whereClause.getQuery();
-                query = query.concat(where.query).concat(" ");
+                query = concat(query, where.query);
 
                 foreach var param in where.parameters {
                     parameters.push(param);
@@ -475,46 +503,43 @@ public type Builder client object {
 
         // Insert query
         if (self.mode == INSERT_QUERY){
-            query = query.concat("( ");
+            query = concat(query, "(");
 
             int i = 0;
             foreach var insertColumn in self.insertColumns {
                 if(i!=0){
-                    query = query.concat(", ");
+                    query = concat(query, ",");
                 }
-                query = query.concat(insertColumn);
+                query = concat(query, insertColumn);
                 i = i+1;
             }
 
-            query = query.concat(") VALUES ");
+            query = concat(query ,") VALUES");
 
             i = 0;
             foreach var valueSet in self.values {
                 if(i!=0){
-                    query = query.concat(", ");
+                    query = concat(query ,",");
                 }
 
-                query = query.concat("( ");
+                query = concat(query ,"(");
 
                 int j =0;
                 foreach var value in valueSet {
                     if(j!=0){
-                        query = query.concat(", ");
+                        query = concat(query, ",");
                     }
-                    query = query.concat("?");
+                    query = concat(query, "?");
                     j = j+1;
                 }
 
-                query = query.concat(" ) ");
+                query = concat(query, ")");
 
                 i=i+1;
             }
         }
 
-        return {
-            query,
-            parameters
-        };
+        return {query, parameters};
     }
 
     public remote function get() returns @tainted table<record {|anydata...;|}> | error {
@@ -564,7 +589,7 @@ public function value(string val) returns Parameter {
 # + ref - The reference that you aliasing
 # + alias - Alias
 public type Alias record {
-    string|Builder ref;
+    string|Builder|jdbc:Param ref;
     string alias;
 };
 
@@ -573,7 +598,7 @@ public type Alias record {
 # + ref - Column name/ table name or sub query
 # + alias - New alias
 # + return - Angelina alias
-public function alias(string|Builder ref, string alias) returns Alias {
+public function alias(string|Builder|jdbc:Param ref, string alias) returns Alias {
     return {
         ref,
         alias
