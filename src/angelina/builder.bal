@@ -386,11 +386,8 @@ public type Builder client object {
     # + right - Right side of the condition
     # + return - Angelina Condition Set
     public function having(UseAsValue left, string operator, UseAsValue right) returns ConditionSet {
-        ConditionSet having = new ();
-
-        having.start(left, operator, right);
-        self.havingClause = having;
-        return having;
+        self.havingClause.start(left, operator, right);
+        return self.havingClause;
     }
 
     public function getQuery() returns AngelinaQuery {
