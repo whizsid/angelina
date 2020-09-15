@@ -140,7 +140,7 @@ public type ConditionSet object {
         foreach var child in self.childs {
             if child is Condition {
                 if(i!=0){
-                        query = query.concat(child.prefixedLogicalOperator).concat(" ");
+                        query = concat(query, child.prefixedLogicalOperator);
                 }
                 
                 if(child.left.parameterType==VALUE){
@@ -149,7 +149,7 @@ public type ConditionSet object {
                 } else {
                     query = query.concat(child.left.value.toString());
                 }
-                query = query.concat(child.operator).concat(" ");
+                query = concat(query, child.operator);
 
                 if(child.right.parameterType==VALUE){
                     query = query.concat("? ");
@@ -160,7 +160,7 @@ public type ConditionSet object {
 
             } else {
                 if(i!=0){
-                        query = query.concat(child.prefixedLogicalOperator).concat(" ");
+                    query = concat(query,child.prefixedLogicalOperator);
                 }
 
                 AngelinaQuery subQuery = child.getQuery();

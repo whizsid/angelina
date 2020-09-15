@@ -13,5 +13,5 @@ target = "java8"
 [[platform.libraries]]
 artafactId = "mysql-connector-java"
 version = "8.0.17"
-path = "/usr/share/java/mysql-connector-java.jar"
+path = "./drivers/mysql-connector-java-8.0.21.jar"
 groupId = "mysql"
