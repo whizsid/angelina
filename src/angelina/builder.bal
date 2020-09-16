@@ -233,13 +233,6 @@ public type AngelinaQuery object {
     }
 };
 
-function concat(string str, string part) returns string {
-    string new_str = str.concat(" ");
-    new_str = new_str.concat(part);
-
-    return new_str;
-}
-
 # Angelina Query Builder
 public type Builder client object {
     jdbc:Client jdbcClient;
