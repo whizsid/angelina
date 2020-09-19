@@ -20,9 +20,9 @@ public type Condition record {
     LogicalOperator prefixedLogicalOperator = EMPTY;
 };
 
-# Angelina condition set using for WHERE clause and ON clause
-public type ConditionSet object {
-    (Condition|ConditionSet)[] childs = [];
+# Condition set using for WHERE clause
+public type WhereClause object {
+    (Condition|WhereClause)[] childs = [];
     LogicalOperator prefixedLogicalOperator = EMPTY;
 
     public function __init() {
@@ -47,7 +47,7 @@ public type ConditionSet object {
     # + operator - Operator that using to compare left side and right side
     # + right - Right side of the condition
     # + return - The condition set
-    public function and(UseAsValue left, string operator, UseAsValue right) returns ConditionSet {
+    public function and(UseAsValue left, string operator, UseAsValue right) returns WhereClause {
 
         self.childs.push(<Condition>{
             left,
@@ -69,7 +69,7 @@ public type ConditionSet object {
     # + operator - Operator that using to compare left side and right side
     # + right - Right side of the condition
     # + return - The condition set
-    public function or(UseAsValue left, string operator, UseAsValue right) returns ConditionSet {
+    public function or(UseAsValue left, string operator, UseAsValue right) returns WhereClause {
         self.childs.push(<Condition>{
             left,
             right,
@@ -92,8 +92,8 @@ public type ConditionSet object {
     # + operator - Operator that using to compare left side and right side
     # + right - Right side of the condition
     # + return - Child condition set
-    public function andSub(UseAsValue left, string operator, UseAsValue right) returns ConditionSet {
-        ConditionSet child = new ();
+    public function andSub(UseAsValue left, string operator, UseAsValue right) returns WhereClause {
+        WhereClause child = new ();
         child.start(left, operator, right, AND);
 
         self.childs.push(child);
@@ -113,8 +113,8 @@ public type ConditionSet object {
     # + operator - Operator that using to compare left side and right side
     # + right - Right side of the condition
     # + return - Child condition set
-    public function orSub(UseAsValue left, string operator, UseAsValue right) returns ConditionSet {
-        ConditionSet child = new ();
+    public function orSub(UseAsValue left, string operator, UseAsValue right) returns WhereClause {
+        WhereClause child = new ();
 
         child.start(left, operator, right, OR);
 
@@ -166,16 +166,38 @@ public type ConditionSet object {
     }
 };
 
-# Join Modes
-public type JoinMode LEFT_OUTER|CROSS|INNER;
-public const LEFT_OUTER = "LEFT_OUTER";
-public const CROSS = "CROSS";
-public const INNER = "INNER";
+# Condition Set for table joining. Same as where clause
+public type OnClause WhereClause;
 
-type TableJoin record {
-    JoinMode mode;
-    UseAsTable tableOrSubQuery;
-    ConditionSet conditions = new ();
+# Join Modes
+public type JoinMode LEFT_OUTER|RIGHT_OUTER|RIGHT|LEFT|STRAIGHT_JOIN|CROSS|INNER;
+public const LEFT_OUTER = "LEFT OUTER";
+public const RIGHT_OUTER = "RIGHT OUTER";
+public const CROSS = "CROSS";
+public const LEFT = "LEFT";
+public const RIGHT = "LEFT";
+public const INNER = "INNER";
+public const STRAIGHT_JOIN = "STRAIGHT JOIN";
+
+public type JoinClause object {
+    public JoinMode mode;
+    public UseAsTable tableOrSubQuery;
+    public WhereClause onClause = new ();
+    public UseAsColumn [] usingClause = [];
+
+    public function __init(JoinMode mode, UseAsTable tableOrSubQuery){
+        self.mode = mode;
+        self.tableOrSubQuery = tableOrSubQuery;
+    }
+
+    public function onWhere(UseAsValue left, string operator, UseAsValue right) returns WhereClause {
+        self.onClause.start(left, operator, right);
+        return self.onClause;
+    }
+
+    public function using(UseAsColumn [] columns){
+        self.usingClause = columns;
+    }
 };
 
 # Update query new values
@@ -240,8 +262,8 @@ public type Builder client object {
     # Main table name
     private UseAsTable tableName = t("");
     # Where cluase for Update\ Select\ Delete queries
-    private ConditionSet where = new ();
-    private TableJoin[] joins = [];
+    private WhereClause where = new ();
+    private JoinClause[] joins = [];
     # Update query new values
     private NewValue[] newValues = [];
     # Insert query columns
@@ -253,7 +275,7 @@ public type Builder client object {
     # Order by clause
     private OrderBy[] orderByColumns = [];
     # Having clause
-    private ConditionSet havingClause = new ();
+    private WhereClause havingClause = new ();
 
     public function __init(jdbc:Client c, UseAsTable tableName) {
         self.tableName = tableName;
@@ -299,64 +321,24 @@ public type Builder client object {
         self.mode = DELETE_QUERY;
     }
 
-    public function where(UseAsValue left, string operator, UseAsValue right) returns ConditionSet {
+    public function where(UseAsValue left, string operator, UseAsValue right) returns WhereClause {
         self.where.start(left, operator, right);
 
         return self.where;
     }
 
-    # Perform a left join
+    # Perform a join
     # 
-    # + tableOrSubQuery - The table name/ aliased table name / aliased sub query
-    # + left - Condition left side
-    # + right - Condition right side
-    # + operator - Operator that should use on condition
+    # + joinMode - `LEFT_OUTER|RIGHT_OUTER|RIGHT|LEFT|STRAIGHT_JOIN|CROSS|INNER`
+    # + tableOrSubquery - Table to join
     # + return - Condition set. You can use more than one conditions in on clause.
-    public function leftJoin(UseAsTable tableOrSubQuery, UseAsValue left, string operator, UseAsValue right)
-    returns ConditionSet {
-        ConditionSet condition = new ();
+    public function joinTable(JoinMode joinMode,UseAsTable tableOrSubquery)
+    returns JoinClause {
+        JoinClause joinClause = new(joinMode, tableOrSubquery);
 
-        condition.start(left, operator, right);
+        self.joins.push(joinClause);
 
-        self.joins.push(<TableJoin>{
-            mode: LEFT_OUTER,
-            tableOrSubQuery: tableOrSubQuery
-        });
-
-        return condition;
-    }
-
-    # Perform a cross join
-    # 
-    # + tableOrSubQuery - The table name/ aliased table name / aliased sub query
-    public function crossJoin(UseAsTable tableOrSubQuery) {
-        self.joins.push(<TableJoin>{
-            mode: LEFT_OUTER,
-            tableOrSubQuery: tableOrSubQuery,
-            conditions: new ()
-        });
-    }
-
-    # Perform a inner join
-    # 
-    # + tableOrSubQuery - The table name/ aliased table name / aliased sub query
-    # + left - Condition left side
-    # + right - Condition right side
-    # + operator - Operator that should use on condition
-    # + return - Condition set. You can use more than one conditions in on clause.
-    public function innerJoin(UseAsTable tableOrSubQuery, UseAsValue left, string operator, UseAsValue right)
-    returns ConditionSet {
-        ConditionSet condition = new ();
-
-        condition.start(left, operator, right);
-
-        self.joins.push(<TableJoin>{
-            mode: INNER,
-            tableOrSubQuery: tableOrSubQuery,
-            conditions: condition
-        });
-
-        return condition;
+        return joinClause;
     }
 
     # Adding a column to the order by clause
@@ -378,7 +360,7 @@ public type Builder client object {
     # + operator - Operator using for the condition
     # + right - Right side of the condition
     # + return - Angelina Condition Set
-    public function having(UseAsValue left, string operator, UseAsValue right) returns ConditionSet {
+    public function having(UseAsValue left, string operator, UseAsValue right) returns WhereClause {
         self.havingClause.start(left, operator, right);
         return self.havingClause;
     }
@@ -458,28 +440,45 @@ public type Builder client object {
 
         // Join Clause
         if (self.mode != INSERT_QUERY) {
-            foreach var tableJoin in self.joins {
-                query.concat_raw(tableJoin.mode);
+            foreach var joinClause in self.joins {
+                query.concat_raw(joinClause.mode);
 
-                AngelinaQuery subQuery = render(tableJoin.tableOrSubQuery);
+                query.concat_raw("JOIN");
+
+                AngelinaQuery subQuery = render(joinClause.tableOrSubQuery);
                 query.concat(subQuery);
 
-                if (tableJoin.mode != CROSS) {
+                if (joinClause.mode != CROSS) {
                     query.concat_raw("ON");
 
-                    ConditionSet conditions = tableJoin.conditions;
+                    WhereClause conditions = joinClause.onClause;
 
                     if (!conditions.isEmpty()) {
                         AngelinaQuery onClause = conditions.getQuery();
                         query.concat( onClause);
                     }
                 }
+
+                if(joinClause.usingClause.length()!=0){
+                    query.concat_raw("USING (");
+
+                    int i = 0;
+                    foreach var col in joinClause.usingClause {
+                        if(i!=0){
+                            query.concat_raw(",");
+                        }
+
+                        query.concat(render(col));
+                    }
+
+                    query.concat_raw(")");
+                }
             }
         }
 
         // Where clause
         if (self.mode != INSERT_QUERY) {
-            ConditionSet whereClause = self.where;
+            WhereClause whereClause = self.where;
             if (!whereClause.isEmpty()) {
                 query.concat_raw("WHERE");
 
@@ -531,6 +530,8 @@ public type Builder client object {
                 i = i + 1;
             }
         }
+
+
 
         return query;
     }
