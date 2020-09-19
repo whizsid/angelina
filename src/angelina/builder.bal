@@ -170,14 +170,15 @@ public type WhereClause object {
 public type OnClause WhereClause;
 
 # Join Modes
-public type JoinMode LEFT_OUTER|RIGHT_OUTER|RIGHT|LEFT|STRAIGHT_JOIN|CROSS|INNER;
-public const LEFT_OUTER = "LEFT OUTER";
-public const RIGHT_OUTER = "RIGHT OUTER";
-public const CROSS = "CROSS";
-public const LEFT = "LEFT";
-public const RIGHT = "LEFT";
-public const INNER = "INNER";
-public const STRAIGHT_JOIN = "STRAIGHT JOIN";
+public type JoinMode LEFT_OUTER_JOIN | RIGHT_OUTER_JOIN | CROSS_JOIN | LEFT_JOIN | RIGHT_JOIN | INNER_JOIN | STRAIGHT_JOIN;
+
+public const LEFT_OUTER_JOIN = "LEFT OUTER";
+public const RIGHT_OUTER_JOIN = "RIGHT OUTER";
+public const CROSS_JOIN = "CROSS";
+public const LEFT_JOIN = "LEFT";
+public const RIGHT_JOIN = "LEFT";
+public const INNER_JOIN = "INNER";
+public const STRAIGHT_JOIN = "STRAIGHT";
 
 public type JoinClause object {
     public JoinMode mode;
@@ -228,12 +229,12 @@ public type AngelinaQuery object {
     string query;
     jdbc:Param[] parameters = [];
 
-    public function __init(string query = "", jdbc:Param[] parameters = []) {
+    function __init(string query = "", jdbc:Param[] parameters = []) {
         self.query = query;
         self.parameters = parameters;
     }
 
-    public function concat( AngelinaQuery query ){
+    function concat( AngelinaQuery query ){
         self.concat_raw(query.query);
 
 
@@ -242,16 +243,12 @@ public type AngelinaQuery object {
         }
     }
 
-    public function concat_raw(string query){
+    function concat_raw(string query){
         if(self.query!=""){
             self.query = self.query.concat(" ");
         }
 
         self.query = self.query.concat(query);
-    }
-
-    public function copy() returns AngelinaQuery{
-        return new(self.query, self.parameters);
     }
 };
 
@@ -329,7 +326,7 @@ public type Builder client object {
 
     # Perform a join
     # 
-    # + joinMode - `LEFT_OUTER|RIGHT_OUTER|RIGHT|LEFT|STRAIGHT_JOIN|CROSS|INNER`
+    # + joinMode - `LEFT_OUTER_JOIN | RIGHT_OUTER_JOIN | CROSS_JOIN | LEFT_JOIN | RIGHT_JOIN | INNER_JOIN | STRAIGHT_JOIN`
     # + tableOrSubquery - Table to join
     # + return - Condition set. You can use more than one conditions in on clause.
     public function joinTable(JoinMode joinMode,UseAsTable tableOrSubquery)
@@ -365,7 +362,7 @@ public type Builder client object {
         return self.havingClause;
     }
 
-    public function getQuery() returns AngelinaQuery {
+    function getQuery() returns AngelinaQuery {
         AngelinaQuery query = new();
 
         match self.mode {
@@ -448,7 +445,7 @@ public type Builder client object {
                 AngelinaQuery subQuery = render(joinClause.tableOrSubQuery);
                 query.concat(subQuery);
 
-                if (joinClause.mode != CROSS) {
+                if (joinClause.mode != CROSS_JOIN) {
                     query.concat_raw("ON");
 
                     WhereClause conditions = joinClause.onClause;

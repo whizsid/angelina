@@ -134,18 +134,18 @@ public function testJoinClause() {
     io:println("TEST: Test cross join");
     Builder query1 = angl.createQuery(t("area"));
     query1.select([]);
-    JoinClause joinClause = query1.joinTable(CROSS,t("shape"));
+    JoinClause joinClause = query1.joinTable(CROSS_JOIN,t("shape"));
     test:assertEquals(query1.getQuery().query, "SELECT * FROM area CROSS JOIN shape");
 
     io:println("TEST: Test join with on clause");
     Builder query2 = angl.createQuery(t("area"));
     query2.select([]);
-    OnClause onClause = query2.joinTable(INNER,t("shape")).onWhere(c("area.shape_id"),"=",c("shape.id")).and(c("area.shape_type"),"=",v(5));
+    OnClause onClause = query2.joinTable(INNER_JOIN,t("shape")).onWhere(c("area.shape_id"),"=",c("shape.id")).and(c("area.shape_type"),"=",v(5));
     test:assertEquals(query2.getQuery().query, "SELECT * FROM area INNER JOIN shape ON area.shape_id = shape.id AND area.shape_type = ?");
 
     io:println("TEST: Test join with using clause");
     Builder query3 = angl.createQuery(t("area"));
     query3.select([]);
-    query3.joinTable(CROSS,t("shape")).using([a(c("column_a"),"column_b")]);
+    query3.joinTable(CROSS_JOIN,t("shape")).using([a(c("column_a"),"column_b")]);
     test:assertEquals(query3.getQuery().query, "SELECT * FROM area CROSS JOIN shape USING ( column_a AS column_b )");
 }
